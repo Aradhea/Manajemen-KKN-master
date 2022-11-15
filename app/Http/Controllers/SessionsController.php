@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-Use Str;
-Use Hash;
 use Illuminate\Auth\Events\PasswordReset;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class SessionsController extends Controller
 {
@@ -23,16 +23,24 @@ class SessionsController extends Controller
             'email' => 'required|email',
             'password' => 'required'
         ]);
-
-        if (! auth()->attempt($attributes)) {
-            throw ValidationException::withMessages([
-                'email' => 'Your provided credentials could not be verified.'
-            ]);
+        $auth = User::where('email',request()->only('email'))->first();
+        if($auth && $auth->status == 1){
+            $check = password_verify(request()->password,$auth->password);
+            if($check){
+                request()->session()->put('login',true);
+                if($auth->role == 'admin'){
+                    request()->session()->put('role','admin');
+                    return redirect('/dashboard');
+                }else if($auth->role == 'mahasiswa'){
+                    request()->session()->put('role','mahasiswa');
+                }else{
+                    request()->session()->put('role','dosen');
+                }
+                //return redirect('/dashboard');
+            }
         }
+        return redirect()->back();
 
-        session()->regenerate();
-
-        return redirect('/dashboard');
 
     }
 
